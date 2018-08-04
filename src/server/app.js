@@ -1,0 +1,1 @@
+const { getArg } = require('./arguments');
