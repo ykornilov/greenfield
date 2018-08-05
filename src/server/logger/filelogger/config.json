@@ -1,0 +1,30 @@
+{
+  "event": {
+    "fileName": "events",
+    "logging": true,
+    "logArchiving": 2,
+    "logExpiring": 12,    
+    "saveTimeInterval": 0
+  },
+  "alarm": {
+    "fileName": "alarms",
+    "logging": true,
+    "logArchiving": 2,
+    "logExpiring": 12,    
+    "saveTimeInterval": 0
+  },
+  "command": {
+    "fileName": "commands",
+    "logging": true,
+    "logArchiving": 2,
+    "logExpiring": 12,    
+    "saveTimeInterval": 0
+  },
+  "data": {
+    "fileName": "data",
+    "logging": true,
+    "logArchiving": 2,
+    "logExpiring": 12,    
+    "saveTimeInterval": 30000
+  }
+}
