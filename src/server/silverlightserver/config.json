@@ -1,0 +1,4 @@
+{
+  "clientAccessPolicyFile": "./clientaccesspolicy.xml",
+  "port": 943
+}
