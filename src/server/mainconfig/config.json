@@ -1,0 +1,4 @@
+{
+  "silverlightClient": true,
+  "loggers": "./filelogger"
+}
