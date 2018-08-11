@@ -10,7 +10,7 @@ function createServer(logger = console) {
     });
 
     socket.on('error', (err) => {
-      logger.log('alarm', `dataclient error: ${err.message}`);
+      logger.log('event', `dataclient error: ${err.message}`);
     });
 
     socket.on('close', () => {
@@ -23,7 +23,7 @@ function createServer(logger = console) {
   });
 
   server.on('error', (err) => {
-    logger.log('alarm', `dataserver error: ${err.message}`);
+    logger.log('event', `dataserver error: ${err.message}`);
     server.close();
     setTimeout(() => server.listen(port), 1000);
   });

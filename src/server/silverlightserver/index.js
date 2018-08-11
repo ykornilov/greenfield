@@ -18,7 +18,7 @@ function createServer(logger = console) {
     });
 
     socket.on('error', (err) => {
-      logger.log('alarm', `silverlightclient error: ${err.message}`);
+      logger.log('event', `silverlightclient error: ${err.message}`);
     });
 
     socket.on('close', () => {
@@ -31,7 +31,7 @@ function createServer(logger = console) {
   });
 
   server.on('error', (err) => {
-    logger.log('alarm', `silverlightserver error: ${err.message}`);
+    logger.log('event', `silverlightserver error: ${err.message}`);
     server.close();
     setTimeout(() => server.listen(port), 1000);
   });

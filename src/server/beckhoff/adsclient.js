@@ -17,6 +17,7 @@ class AdsClient extends events.EventEmitter {
         symname: dp.name,
         bytelength: ads[dp.type],
         access: dp.access,
+        isAlarm: dp.isAlarm,
       }
     ));
   }
