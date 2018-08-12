@@ -1,9 +1,9 @@
 const net = require('net');
 const events = require('events');
-const { port } = require('./config');
+const { port, AMX } = require('./config');
 
 class DataServer extends events.EventEmitter {
-  costructor(logger = console) {
+  constructor(logger = console) {
     super();
     this.logger = logger;
     this.server = null;
@@ -13,7 +13,11 @@ class DataServer extends events.EventEmitter {
   start() {
     this.server = net.createServer((socket) => {
       this.logger.log('event', `client connected to dataserver: ${socket.remoteAddress}`);
+      socket.setEncoding('utf-8');
       this.clients.push(socket);
+      if (!socket.remoteAddress.includes(AMX)) {
+        this.emit('data', '%getAll;');
+      }
 
       socket.on('data', (data) => {
         this.emit('data', data);
@@ -48,7 +52,7 @@ class DataServer extends events.EventEmitter {
   }
 
   send(data) {
-    this.clients.forEach(client => client.write(data, 'utf-8', (err) => {
+    this.clients.forEach(client => client.write(data, (err) => {
       if (err) {
         this.logger.log('event', `dataclient send error: ${err.message}`);
         this.destroyClient(client);

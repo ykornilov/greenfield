@@ -21,15 +21,12 @@ class BeckhoffClient extends events.EventEmitter {
         }
       ), {});
 
-    this.controllers.forEach(controller => controller.on('data', data => this.emit('data', data)));
+    Object.values(this.controllers).forEach(controller => controller.on('data', data => this.emit('data', data)));
+    process.on('exit', () => this.disconnect());
   }
 
   connect() {
-    this.controllers.forEach(controller => controller.connect());
-  }
-
-  disconnect() {
-    this.controllers.forEach(controller => controller.disconnect());
+    Object.values(this.controllers).forEach(controller => controller.connect());
   }
 
   write(valueId, value) {
@@ -38,6 +35,14 @@ class BeckhoffClient extends events.EventEmitter {
     if (controller) {
       this.controllers[controller.amsNetIdTarget].write(valueId, value);
     }
+  }
+
+  getAll() {
+    Object.values(this.controllers).forEach(controller => controller.getAll());
+  }
+
+  disconnect() {
+    Object.values(this.controllers).forEach(controller => controller.disconnect());
   }
 }
 

@@ -10,8 +10,9 @@ class AdsClient extends events.EventEmitter {
       host: options.host,
       amsNetIdSource: options.amsNetIdSource,
       amsNetIdTarget: options.amsNetIdTarget,
+      minReceiveTime: options.minReceiveTime || 0,
     };
-    this.handlers = options.datapoints.map(dp => (
+    this.handles = options.datapoints.map(dp => (
       {
         id: dp.id,
         symname: dp.name,
@@ -20,45 +21,81 @@ class AdsClient extends events.EventEmitter {
         isAlarm: dp.isAlarm,
       }
     ));
+    this.handleIndex = 0;
+    this.ready = false;
+    this.watchTimer = null;
   }
 
   connect() {
     this.client = ads.connect(this.options, () => {
-      this.handlers.array.forEach(handler => this.notify(handler));
-      this.logger.log('event', `Controller connected [${this}];`);
+      this.client.readDeviceInfo((err, result) => {
+        if (err) {
+          this.logger.log('event', `Controller connect error: ${err.message}`);
+        }
+        this.logger.log('event', `Connected to controller [${this.options.amsNetIdTarget}]: ${JSON.stringify(result)}`);
+        // this.handles.forEach(handle => this.client.notify(handle));
+        this.notify();
+        this.watch();
+      });
     });
 
     this.client.on('notification', (handle) => {
       this.logger.log('data', `${handle.symname} = ${handle.value};`);
       this.emit('data', `%${handle.id}=${handle.value};`);
+      clearTimeout(this.watchTimer);
+      this.watch();
     });
   }
 
+  notify() {
+    if (this.handleIndex < this.handles.length) {
+      this.client.notify(this.handles[this.handleIndex]);
+      setTimeout(() => this.notify(), 50);
+      this.handleIndex += 1;
+    } else {
+      this.ready = true;
+      this.logger.log('event', `all notifications for controller ${this.options.amsNetIdTarget} is connected`);
+    }
+  }
+
+  watch() {
+    if (this.options.minReceiveTime) {
+      this.watchTimer = setTimeout(() => {
+        this.logger.log('event', `watchTimer for controller ${this.options.amsNetIdSource}`);
+        this.restart();
+      }, this.options.minReceiveTime);
+    }
+  }
+
+  getAll() {
+    this.handles.forEach(handle => this.emit('data', `%${handle.id}=${handle.value};`));
+  }
+
   write(valueId, value) {
-    const handler = this.handlers.find(dp => dp.id === valueId);
-    if (handler && handler.access === 'write') {
-      handler.value = value;
-      this.client.write(handler, (errWriting) => {
+    const handle = this.handles.find(dp => dp.id === valueId);
+    if (this.ready && handle && handle.access === 'write') {
+      handle.value = Number(value.replace(',', '.'));
+      this.client.write(handle, (errWriting) => {
         if (errWriting) {
-          this.logger.log('event', `error write value for ${this.options.amsNetIdTarget}:${handler.symname} - ${errWriting.message}`);
-          return false;
+          this.logger.log('event', `error write value for ${this.options.amsNetIdTarget}:${handle.symname} - ${errWriting.message}`);
         }
-        this.client.read(handler, (errReading, handle) => {
-          if (errReading) {
-            this.logger.log('event', `error read value for ${this.options.amsNetIdTarget}:${handler.symname} - ${errReading.message}`);
-            return false;
-          }
-          this.logger.log('data', `${handle.symname} = ${handle.value};`);
-          this.emit('data', `%${handle.id}=${handle.value};`);
-          return true;
-        });
-        return true;
       });
     }
   }
 
+  restart() {
+    this.disconnect();
+    setTimeout(() => this.connect(), 10000);
+  }
+
   disconnect() {
-    this.client.end(() => this.logger.log('event', `Controller disconnected [${this}];`));
+    if (this.watchTimer) {
+      clearTimeout(this.watchTimer);
+    }
+    this.client.removeAllListeners();
+    this.client.end(() => this.logger.log('event', `Controller disconnected [${this.options.amsNetIdTarget}];`));
+    this.handleIndex = 0;
+    this.ready = false;
   }
 }
 
