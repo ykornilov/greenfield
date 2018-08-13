@@ -14,11 +14,10 @@ class AdsClient extends events.EventEmitter {
     };
     this.handles = options.datapoints.map(dp => (
       {
-        id: dp.id,
+        ...dp,
         symname: dp.name,
         bytelength: ads[dp.type],
-        access: dp.access,
-        isAlarm: dp.isAlarm,
+        oldValue: 0,
       }
     ));
     this.handleIndex = 0;
@@ -40,8 +39,16 @@ class AdsClient extends events.EventEmitter {
     });
 
     this.client.on('notification', (handle) => {
-      this.logger.log('data', `${handle.symname} = ${handle.value};`);
-      this.emit('data', `%${handle.id}=${handle.value};`);
+      if (!handle.debounce
+        || (handle.debounce && Math.abs(handle.value - handle.oldValue) / 100 >= handle.debounce)) {
+        /* eslint no-param-reassign: ["error", {
+          "props": true,
+          "ignorePropertyModificationsFor": ["handle"]
+        }] */
+        handle.oldValue = handle.value;
+        this.logger.log('data', `${handle.symname} = ${handle.value};`);
+        this.emit('data', `%${handle.id}=${handle.value};`);
+      }
       clearTimeout(this.watchTimer);
       this.watch();
     });
