@@ -38,6 +38,11 @@ class AdsClient extends events.EventEmitter {
       });
     });
 
+    this.client.on('error', (err) => {
+      this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] error: ${err}`);
+      this.restart();
+    });
+
     this.client.on('notification', (handle) => {
       if (!handle.debounce
         || (handle.debounce && Math.abs(handle.value - handle.oldValue) / 100 >= handle.debounce)) {
@@ -68,7 +73,7 @@ class AdsClient extends events.EventEmitter {
   watch() {
     if (this.options.minReceiveTime) {
       this.watchTimer = setTimeout(() => {
-        this.logger.log('event', `watchTimer for controller ${this.options.amsNetIdSource}`);
+        this.logger.log('event', `watchTimer for controller ${this.options.amsNetIdTarget}`);
         this.restart();
       }, this.options.minReceiveTime);
     }
