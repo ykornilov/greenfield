@@ -30,6 +30,8 @@ class AdsClient extends events.EventEmitter {
       this.client.readDeviceInfo((err, result) => {
         if (err) {
           this.logger.log('event', `Controller connect error: ${err.message}`);
+          this.restart();
+          return;
         }
         this.logger.log('event', `Connected to controller [${this.options.amsNetIdTarget}]: ${JSON.stringify(result)}`);
         // this.handles.forEach(handle => this.client.notify(handle));
@@ -40,6 +42,11 @@ class AdsClient extends events.EventEmitter {
 
     this.client.on('error', (err) => {
       this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] error: ${err}`);
+      this.restart();
+    });
+
+    this.client.on('timeout', (err) => {
+      this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] timeout: ${err}`);
       this.restart();
     });
 
@@ -54,7 +61,9 @@ class AdsClient extends events.EventEmitter {
         this.logger.log('data', `${handle.symname} = ${handle.value};`);
         this.emit('data', `%${handle.id}=${handle.value};`);
       }
-      clearTimeout(this.watchTimer);
+      if (this.watchTimer) {
+        clearTimeout(this.watchTimer);
+      }
       this.watch();
     });
   }
@@ -96,18 +105,22 @@ class AdsClient extends events.EventEmitter {
   }
 
   restart() {
-    this.disconnect();
-    setTimeout(() => this.connect(), 10000);
+    this.disconnect(true);
   }
 
-  disconnect() {
+  disconnect(restart) {
     if (this.watchTimer) {
       clearTimeout(this.watchTimer);
     }
-    this.client.removeAllListeners();
-    this.client.end(() => this.logger.log('event', `Controller disconnected [${this.options.amsNetIdTarget}];`));
     this.handleIndex = 0;
     this.ready = false;
+    this.client.removeAllListeners();
+    this.client.end(() => {
+      this.logger.log('event', `Controller disconnected [${this.options.amsNetIdTarget}];`);
+      if (restart) {
+        setTimeout(() => this.connect(), 10000);
+      }
+    });
   }
 }
 
