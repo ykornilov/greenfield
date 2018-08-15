@@ -35,9 +35,9 @@ class AdsClient extends events.EventEmitter {
         }
         this.logger.log('event', `Connected to controller [${this.options.amsNetIdTarget}]: ${JSON.stringify(result)}`);
         // this.handles.forEach(handle => this.client.notify(handle));
-        this.addNotifications();
+        this.addNotifications(() => this.watch());
         // this.notify();
-        this.watch();
+        // this.watch();
       });
     });
 
@@ -64,8 +64,8 @@ class AdsClient extends events.EventEmitter {
       }
       if (this.watchTimer) {
         clearTimeout(this.watchTimer);
+        this.watch();
       }
-      this.watch();
     });
   }
 
