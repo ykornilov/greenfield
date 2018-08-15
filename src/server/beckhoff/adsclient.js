@@ -35,7 +35,8 @@ class AdsClient extends events.EventEmitter {
         }
         this.logger.log('event', `Connected to controller [${this.options.amsNetIdTarget}]: ${JSON.stringify(result)}`);
         // this.handles.forEach(handle => this.client.notify(handle));
-        this.notify();
+        this.addNotifications();
+        // this.notify();
         this.watch();
       });
     });
@@ -68,16 +69,32 @@ class AdsClient extends events.EventEmitter {
     });
   }
 
-  notify() {
+  addNotifications(cb) {
     if (this.handleIndex < this.handles.length) {
-      this.client.notify(this.handles[this.handleIndex]);
-      setTimeout(() => this.notify(), 50);
-      this.handleIndex += 1;
-    } else {
-      this.ready = true;
-      this.logger.log('event', `all notifications for controller ${this.options.amsNetIdTarget} is connected`);
+      this.addNotification(this.handles[this.handleIndex], () => this.addNotifications(cb));
+    } else if (cb && typeof cb === 'function') {
+      cb();
     }
   }
+
+  addNotification(handle, cb) {
+    this.client.notify(this.handles[this.handleIndex], () => {
+      this.handleIndex += 1;
+      cb();
+    });
+  }
+
+
+  // notify() {
+  //   if (this.handleIndex < this.handles.length) {
+  //     this.client.notify(this.handles[this.handleIndex]);
+  //     setTimeout(() => this.notify(), 50);
+  //     this.handleIndex += 1;
+  //   } else {
+  //     this.ready = true;
+  //     this.logger.log('event', `all notifications for controller ${this.options.amsNetIdTarget} is connected`);
+  //   }
+  // }
 
   watch() {
     if (this.options.minReceiveTime) {
@@ -114,9 +131,9 @@ class AdsClient extends events.EventEmitter {
     }
     this.handleIndex = 0;
     this.ready = false;
-    this.client.removeAllListeners();
     this.client.end(() => {
       this.logger.log('event', `Controller disconnected [${this.options.amsNetIdTarget}];`);
+      this.client.removeAllListeners();
       if (restart) {
         setTimeout(() => this.connect(), 10000);
       }
