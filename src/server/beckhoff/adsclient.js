@@ -22,6 +22,7 @@ class AdsClient extends events.EventEmitter {
     ));
     this.handleIndex = 0;
     this.ready = false;
+    this.disconnecting = false;
     this.watchTimer = null;
   }
 
@@ -126,6 +127,10 @@ class AdsClient extends events.EventEmitter {
   }
 
   disconnect(restart) {
+    if (this.disconnecting) {
+      return;
+    }
+    this.disconnecting = true;
     if (this.watchTimer) {
       clearTimeout(this.watchTimer);
     }
@@ -134,6 +139,7 @@ class AdsClient extends events.EventEmitter {
     this.client.end(() => {
       this.logger.log('event', `Controller disconnected [${this.options.amsNetIdTarget}];`);
       this.client.removeAllListeners();
+      this.disconnecting = false;
       if (restart) {
         setTimeout(() => this.connect(), 10000);
       }
