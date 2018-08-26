@@ -37,6 +37,7 @@ class Dispatcher {
         switch (cmd) {
           case 'getAll':
             this.beckhoff.getAll(data.id);
+            this.logger.log('command', `${data.id}: ${cmd}`);
             break;
           default:
             this.logger.log('event', cmd);

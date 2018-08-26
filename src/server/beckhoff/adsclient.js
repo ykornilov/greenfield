@@ -57,7 +57,7 @@ class AdsClient extends events.EventEmitter {
           "ignorePropertyModificationsFor": ["handle"]
         }] */
         handle.oldValue = handle.value;
-        this.logger.log('data', `${handle.symname} = ${handle.value}`);
+        this.logger.log('data', `Controller [${this.options.amsNetIdTarget}]: ${handle.symname} = ${handle.value}`);
         this.emit('data', {
           id: null,
           payload: `%${handle.id}=${handle.value};`,
