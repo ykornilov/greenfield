@@ -30,7 +30,7 @@ class Dispatcher {
           [value, panel] = value.split('|');
           this.logger.log('command', `AMX [panel ${panel}]: ${valueId} = ${value}`);
         } else {
-          this.logger.log('command', `Computer: ${valueId} = ${value}`);
+          this.logger.log('command', `${data.id}: ${valueId} = ${value}`);
         }
         this.beckhoff.write(valueId, value);
       } else {
@@ -49,7 +49,6 @@ class Dispatcher {
   start() {
     this.beckhoff.connect();
     setTimeout(() => this.dataserver.start(), 10000);
-    // setTimeout(() => this.beckhoff.write('K12.Room012_SetptTemp', 21), 5000);
   }
 
   stop() {

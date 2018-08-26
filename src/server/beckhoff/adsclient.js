@@ -73,8 +73,11 @@ class AdsClient extends events.EventEmitter {
   addNotifications(cb) {
     if (this.handleIndex < this.handles.length) {
       this.addNotification(this.handles[this.handleIndex], () => this.addNotifications(cb));
-    } else if (cb && typeof cb === 'function') {
-      cb();
+    } else {
+      this.ready = true;
+      if (cb && typeof cb === 'function') {
+        cb();
+      }
     }
   }
 
