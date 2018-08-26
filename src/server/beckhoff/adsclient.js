@@ -35,10 +35,7 @@ class AdsClient extends events.EventEmitter {
           return;
         }
         this.logger.log('event', `Connected to controller [${this.options.amsNetIdTarget}]: ${JSON.stringify(result)}`);
-        // this.handles.forEach(handle => this.client.notify(handle));
         this.addNotifications(() => this.watch());
-        // this.notify();
-        // this.watch();
       });
     });
 
@@ -60,8 +57,11 @@ class AdsClient extends events.EventEmitter {
           "ignorePropertyModificationsFor": ["handle"]
         }] */
         handle.oldValue = handle.value;
-        this.logger.log('data', `${handle.symname} = ${handle.value};`);
-        this.emit('data', `%${handle.id}=${handle.value};`);
+        this.logger.log('data', `${handle.symname} = ${handle.value}`);
+        this.emit('data', {
+          id: null,
+          payload: `%${handle.id}=${handle.value};`,
+        });
       }
       if (this.watchTimer) {
         clearTimeout(this.watchTimer);
@@ -85,45 +85,40 @@ class AdsClient extends events.EventEmitter {
         cb();
       });
     } catch (e) {
-      this.logger.log(`addNotification error: ${e.name} / ${e.message} \n ${e.stack}`);
+      this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] addNotification error: ${e.name} / ${e.message} \n ${e.stack}`);
       this.restart();
     }
   }
 
-
-  // notify() {
-  //   if (this.handleIndex < this.handles.length) {
-  //     this.client.notify(this.handles[this.handleIndex]);
-  //     setTimeout(() => this.notify(), 50);
-  //     this.handleIndex += 1;
-  //   } else {
-  //     this.ready = true;
-  //     this.logger.log('event', `all notifications for controller ${this.options.amsNetIdTarget} is connected`);
-  //   }
-  // }
-
   watch() {
     if (this.options.minReceiveTime) {
       this.watchTimer = setTimeout(() => {
-        this.logger.log('event', `watchTimer for controller ${this.options.amsNetIdTarget}`);
+        this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] watchTimer error`);
         this.restart();
       }, this.options.minReceiveTime);
     }
   }
 
-  getAll() {
-    this.handles.forEach(handle => this.emit('data', `%${handle.id}=${handle.value};`));
+  getAll(id) {
+    this.handles.forEach(handle => this.emit('data', {
+      id,
+      payload: `%${handle.id}=${handle.value};`,
+    }));
   }
 
   write(valueId, value) {
     const handle = this.handles.find(dp => dp.id === valueId);
     if (this.ready && handle && handle.access === 'write') {
-      handle.value = Number(value.replace(',', '.'));
-      this.client.write(handle, (errWriting) => {
-        if (errWriting) {
-          this.logger.log('event', `error write value for ${this.options.amsNetIdTarget}:${handle.symname} - ${errWriting.message}`);
-        }
-      });
+      try {
+        handle.value = Number(value.replace(',', '.'));
+        this.client.write(handle, (errWriting) => {
+          if (errWriting) {
+            this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] error write: ${handle.symname} - ${errWriting.message}`);
+          }
+        });
+      } catch (e) {
+        this.logger.log('event', `Parsing error ${valueId} = ${value}`);
+      }
     }
   }
 
@@ -142,7 +137,7 @@ class AdsClient extends events.EventEmitter {
     this.handleIndex = 0;
     this.ready = false;
     this.client.end(() => {
-      this.logger.log('event', `Controller disconnected [${this.options.amsNetIdTarget}];`);
+      this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] disconnected`);
       this.client.removeAllListeners();
       this.disconnecting = false;
       if (restart) {

@@ -1,5 +1,5 @@
 // const { getArg } = require('./arguments');
-// const { logger } = require('./logger');
+const { logger } = require('./logger');
 const config = require('./mainconfig');
 const silverlight = require('./silverlightserver');
 const { BeckhoffClient } = require('./beckhoff');
@@ -10,5 +10,5 @@ if (config.silverlightClient) {
   silverlight.createServer();
 }
 
-const dispatcher = new Dispatcher(new BeckhoffClient(), new DataServer());
+const dispatcher = new Dispatcher(new BeckhoffClient(), new DataServer(), logger);
 dispatcher.start();
