@@ -7,8 +7,8 @@ const { DataServer } = require('./dataserver');
 const { Dispatcher } = require('./dispatcher');
 
 if (config.silverlightClient) {
-  silverlight.createServer();
+  silverlight.createServer(logger);
 }
 
-const dispatcher = new Dispatcher(new BeckhoffClient(), new DataServer(), logger);
+const dispatcher = new Dispatcher(new BeckhoffClient(logger), new DataServer(logger), logger);
 dispatcher.start();

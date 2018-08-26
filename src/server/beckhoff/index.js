@@ -3,7 +3,7 @@ const config = require('./config');
 const { AdsClient } = require('./adsclient');
 
 class BeckhoffClient extends events.EventEmitter {
-  constructor(options, logger = console) {
+  constructor(logger = console) {
     super();
 
     this.controllers = config.controllers
