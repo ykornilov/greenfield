@@ -79,10 +79,15 @@ class AdsClient extends events.EventEmitter {
   }
 
   addNotification(handle, cb) {
-    this.client.notify(this.handles[this.handleIndex], () => {
-      this.handleIndex += 1;
-      cb();
-    });
+    try {
+      this.client.notify(this.handles[this.handleIndex], () => {
+        this.handleIndex += 1;
+        cb();
+      });
+    } catch (e) {
+      this.logger.log(`addNotification error: ${e.name} / ${e.message} \n ${e.stack}`);
+      this.restart();
+    }
   }
 
 
