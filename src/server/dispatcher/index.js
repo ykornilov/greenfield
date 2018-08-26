@@ -5,7 +5,6 @@ class Dispatcher {
     this.dataserver = dataserver;
 
     this.beckhoff.on('data', (data) => {
-      this.logger.log(data);
       this.dataserver.send(data);
     });
 
@@ -16,9 +15,7 @@ class Dispatcher {
         end: /;$/,
       };
 
-      const cmd = data.replace(re.start, '').replace(re.end, '');
-      this.logger.log('event', cmd);
-
+      const cmd = data.payload.replace(re.start, '').replace(re.end, '');
       if (re.log.test(cmd)) {
         this.logger.log('event', cmd.replace(re.log, ''));
       } else if (cmd.includes('electro_counter')) {
@@ -39,7 +36,7 @@ class Dispatcher {
       } else {
         switch (cmd) {
           case 'getAll':
-            this.beckhoff.getAll();
+            this.beckhoff.getAll(data.id);
             break;
           default:
             this.logger.log('event', cmd);

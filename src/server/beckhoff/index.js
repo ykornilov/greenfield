@@ -37,8 +37,8 @@ class BeckhoffClient extends events.EventEmitter {
     }
   }
 
-  getAll() {
-    Object.values(this.controllers).forEach(controller => controller.getAll());
+  getAll(id) {
+    Object.values(this.controllers).forEach(controller => controller.getAll(id));
   }
 
   disconnect() {
