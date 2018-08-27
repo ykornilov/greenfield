@@ -50,8 +50,10 @@ class AdsClient extends events.EventEmitter {
     });
 
     this.client.on('notification', (handle) => {
-      if (!handle.debounce
-        || (handle.debounce && Math.abs(handle.value - handle.oldValue) / 100 >= handle.debounce)) {
+      if (handle.symname !== 'HeartBeat.pulse'
+        && (!handle.debounce
+          || (handle.debounce
+            && Math.abs(handle.value - handle.oldValue) / 100 >= handle.debounce))) {
         /* eslint no-param-reassign: ["error", {
           "props": true,
           "ignorePropertyModificationsFor": ["handle"]

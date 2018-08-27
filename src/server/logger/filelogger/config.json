@@ -25,6 +25,6 @@
     "logging": true,
     "logArchiving": 2,
     "logExpiring": 12,    
-    "saveTimeInterval": 30000
+    "saveTimeInterval": 120000
   }
 }
