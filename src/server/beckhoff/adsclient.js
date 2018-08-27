@@ -50,7 +50,7 @@ class AdsClient extends events.EventEmitter {
     });
 
     this.client.on('notification', (handle) => {
-      if (handle.symname !== 'HeartBeat.pulse'
+      if (handle.symname !== 'HeartBeat.puls'
         && (!handle.debounce
           || (handle.debounce
             && Math.abs(handle.value - handle.oldValue) / 100 >= handle.debounce))) {
