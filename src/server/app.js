@@ -12,4 +12,4 @@ if (config.silverlightClient) {
 
 const dispatcher = new Dispatcher(new BeckhoffClient(logger), new DataServer(logger), logger);
 
-setTimeout(() => dispatcher.start(), 30000);
+setTimeout(() => dispatcher.start(), 180000);
