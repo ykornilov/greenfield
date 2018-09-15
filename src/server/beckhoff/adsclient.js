@@ -11,15 +11,9 @@ class AdsClient extends events.EventEmitter {
       amsNetIdSource: options.amsNetIdSource,
       amsNetIdTarget: options.amsNetIdTarget,
       minReceiveTime: options.minReceiveTime || 0,
+      datapoints: options.datapoints,
     };
-    this.handles = options.datapoints.map(dp => (
-      {
-        ...dp,
-        symname: dp.name,
-        bytelength: ads[dp.type],
-        oldValue: 0,
-      }
-    ));
+    this.handles = null;
     this.handleIndex = 0;
     this.ready = false;
     this.disconnecting = false;
@@ -28,29 +22,27 @@ class AdsClient extends events.EventEmitter {
     this.numberOfRestart = 0;
   }
 
-  connect() {
-    this.client = ads.connect(this.options, () => {
-      this.client.readDeviceInfo((err, result) => {
-        if (err) {
-          this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] connect error: ${err.message}`);
-          this.restart();
-          return;
-        }
-        this.logger.log('event', `Connected to controller [${this.options.amsNetIdTarget}]: ${JSON.stringify(result)}`);
-        this.addNotifications(() => this.watch());
-      });
-    });
+  getHandles() {
+    this.handles = this.options.datapoints.map(dp => (
+      {
+        ...dp,
+        symname: dp.name,
+        bytelength: ads[dp.type],
+        oldValue: 0,
+      }
+    ));
+  }
 
-    this.client.on('error', (err) => {
-      this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] error: ${err}`);
-      this.restart();
-    });
+  errorHandler(typeError, err = '') {
+    this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] ${TypeError}: ${err.message || err}`);
+    this.restart();
+  }
 
-    this.client.on('timeout', (err) => {
-      this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] timeout: ${err}`);
-      this.restart();
-    });
+  setErrorHandler(typeError) {
+    this.client.on(typeError, err => this.errorHandler(typeError, err));
+  }
 
+  setNotificationHandler() {
     this.client.on('notification', (handle) => {
       if (handle.symname !== 'HeartBeat.puls'
         && (!handle.debounce
@@ -75,6 +67,27 @@ class AdsClient extends events.EventEmitter {
     });
   }
 
+  readDeviceInfo() {
+    this.client.readDeviceInfo((err, result) => {
+      if (err) {
+        this.errorHandler('connect error', err);
+        return;
+      }
+      this.logger.log('event', `Connected to controller [${this.options.amsNetIdTarget}]: ${JSON.stringify(result)}`);
+    });
+  }
+
+  connect() {
+    this.client = ads.connect(this.options, () => {
+      this.setErrorHandler('error');
+      this.setErrorHandler('timeout');
+      this.setNotificationHandler();
+      this.getHandles();
+      this.readDeviceInfo();
+      this.addNotifications(() => this.watch());
+    });
+  }
+
   addNotifications(cb) {
     if (this.handleIndex < this.handles.length) {
       this.addNotification(this.handles[this.handleIndex], () => this.addNotifications(cb));
@@ -96,13 +109,15 @@ class AdsClient extends events.EventEmitter {
   watch() {
     if (this.options.minReceiveTime) {
       this.watchTimer = setTimeout(() => {
-        this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] watchTimer error`);
-        this.restart();
-      }, this.options.minReceiveTime * 5);
+        this.errorHandler('watchTimer error', { message: 'timeout' });
+      }, this.options.minReceiveTime * 2);
     }
   }
 
   getAll(id) {
+    if (!this.ready) {
+      return;
+    }
     this.handles.forEach(handle => this.emit('data', {
       id,
       payload: `%${handle.id}=${handle.value};`,
@@ -110,13 +125,16 @@ class AdsClient extends events.EventEmitter {
   }
 
   write(valueId, value) {
+    if (!this.ready) {
+      return;
+    }
     const handle = this.handles.find(dp => dp.id === valueId);
-    if (this.ready && handle && handle.access === 'write') {
+    if (handle && handle.access === 'write') {
       try {
         handle.value = Number(value.replace(',', '.'));
         this.client.write(handle, (errWriting) => {
           if (errWriting) {
-            this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] error write: ${handle.symname} - ${errWriting.message}`);
+            this.errorHandler('error write', { message: `${handle.symname} - ${errWriting.message}` });
           }
         });
       } catch (e) {
@@ -129,6 +147,21 @@ class AdsClient extends events.EventEmitter {
     this.disconnect(true);
   }
 
+  disconnectHandler(restart) {
+    this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] disconnected`);
+    this.client.removeAllListeners();
+    this.disconnecting = false;
+    this.handles = null;
+    this.handleIndex = 0;
+    if (restart) {
+      this.numberOfRestart += 1;
+      if (this.numberOfRestart === 20) {
+        throw new Error(`Can't connect to controller ${this.options.amsNetIdTarget}`);
+      }
+      setTimeout(() => this.connect(), this.numberOfRestart * this.baseRestartTimeout);
+    }
+  }
+
   disconnect(restart) {
     if (this.disconnecting) {
       return;
@@ -137,20 +170,8 @@ class AdsClient extends events.EventEmitter {
     if (this.watchTimer) {
       clearTimeout(this.watchTimer);
     }
-    this.handleIndex = 0;
     this.ready = false;
-    this.client.end(() => {
-      this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] disconnected`);
-      this.client.removeAllListeners();
-      this.disconnecting = false;
-      if (restart) {
-        this.numberOfRestart += 1;
-        if (this.numberOfRestart === 20) {
-          throw new Error(`Can't connect to controller ${this.options.amsNetIdTarget}`);
-        }
-        setTimeout(() => this.connect(), this.numberOfRestart * this.baseRestartTimeout);
-      }
-    });
+    this.client.end(() => this.disconnectHandler(restart));
   }
 }
 
