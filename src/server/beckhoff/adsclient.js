@@ -24,13 +24,15 @@ class AdsClient extends events.EventEmitter {
     this.ready = false;
     this.disconnecting = false;
     this.watchTimer = null;
+    this.baseRestartTimeout = 10000;
+    this.numberOfRestart = 0;
   }
 
   connect() {
     this.client = ads.connect(this.options, () => {
       this.client.readDeviceInfo((err, result) => {
         if (err) {
-          this.logger.log('event', `Controller connect error: ${err.message}`);
+          this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] connect error: ${err.message}`);
           this.restart();
           return;
         }
@@ -66,6 +68,7 @@ class AdsClient extends events.EventEmitter {
         });
       }
       if (this.watchTimer) {
+        this.numberOfRestart = 0;
         clearTimeout(this.watchTimer);
         this.watch();
       }
@@ -84,15 +87,10 @@ class AdsClient extends events.EventEmitter {
   }
 
   addNotification(handle, cb) {
-    try {
-      this.client.notify(this.handles[this.handleIndex], () => {
-        this.handleIndex += 1;
-        cb();
-      });
-    } catch (e) {
-      this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] addNotification error: ${e.name} / ${e.message} \n ${e.stack}`);
-      this.restart();
-    }
+    this.client.notify(this.handles[this.handleIndex], () => {
+      this.handleIndex += 1;
+      cb();
+    });
   }
 
   watch() {
@@ -100,7 +98,7 @@ class AdsClient extends events.EventEmitter {
       this.watchTimer = setTimeout(() => {
         this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] watchTimer error`);
         this.restart();
-      }, this.options.minReceiveTime);
+      }, this.options.minReceiveTime * 5);
     }
   }
 
@@ -146,7 +144,11 @@ class AdsClient extends events.EventEmitter {
       this.client.removeAllListeners();
       this.disconnecting = false;
       if (restart) {
-        setTimeout(() => this.connect(), 10000);
+        this.numberOfRestart += 1;
+        if (this.numberOfRestart === 20) {
+          throw new Error(`Can't connect to controller ${this.options.amsNetIdTarget}`);
+        }
+        setTimeout(() => this.connect(), this.numberOfRestart * this.baseRestartTimeout);
       }
     });
   }
