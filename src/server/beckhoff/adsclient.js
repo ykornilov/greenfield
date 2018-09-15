@@ -34,7 +34,7 @@ class AdsClient extends events.EventEmitter {
   }
 
   errorHandler(typeError, err = '') {
-    this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] ${TypeError}: ${err.message || err}`);
+    this.logger.log('event', `Controller [${this.options.amsNetIdTarget}] ${typeError}: ${err.message || err}`);
     this.restart();
   }
 
