@@ -79,13 +79,13 @@ class AdsClient extends events.EventEmitter {
 
   connect() {
     this.client = ads.connect(this.options, () => {
-      this.setErrorHandler('error');
-      this.setErrorHandler('timeout');
-      this.setNotificationHandler();
       this.getHandles();
       this.readDeviceInfo();
       this.addNotifications(() => this.watch());
     });
+    this.setErrorHandler('error');
+    this.setErrorHandler('timeout');
+    this.setNotificationHandler();
   }
 
   addNotifications(cb) {
